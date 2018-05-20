@@ -1,0 +1,14 @@
+{
+  "name": "ws-game",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "author": "zoe ying",
+  "license": "ISC",
+  "dependencies": {
+    "ws": "^5.1.1"
+  }
+}

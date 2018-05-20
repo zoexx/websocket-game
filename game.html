@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">	
+	<title>game</title>
+	<style> 
+		/*选择器 ：标签名 ，类 class，id ，派生 */
+		body{
+			/* 属性 ： 值 ；*/
+			color: black;
+            background-color: #FFC107;
+            position: relative;
+            z-index: 0;
+		}
+		.box {
+			width: 662px;
+			height: 662px;
+			/*border: 2px dashed lightblue ;*/
+			font-size: 0px;
+			margin: 30px auto;
+		}
+		/* 选择祖先中有div标签并且class=box-item 的元素 */
+	    div .box-item {
+	    	width: 200px;
+	    	height: 200px;
+	    	line-height: 200px;
+            margin: 10px;
+            display: inline-block;
+            font-size: 50px;
+            text-align: center;
+            background-color: white;
+            box-shadow: 3px 3px 10px 2px rgba(0,0,0,0.3);   
+	    }
+
+	    .score-board{
+	    	background-color: darkgreen;
+	    	color: #ffffff;
+	    	display: inline-block;
+	    	padding: 10px 20px;
+	    }
+
+	    .mask{
+	    	position: fixed;
+	    	z-index: 1;
+	    	top: 0;
+	    	left: 0;
+	    	bottom: 0;
+	    	right: 0;
+	    	background-color: #CDDC39;
+	    	text-align: center;
+	    	transition: all .3s;
+	    }
+	    .mask.fadeout{
+	    	opacity: 0;
+	    	z-index: -1;
+	    }
+
+	    .start-button{
+		    border: 1px solid #047b70;
+		    background-color: #009688;
+		    font-size: 30px;
+		    color: #ffffff;
+		    padding: 10px 80px;
+		    border-radius: 4px;
+		    box-shadow: 1px 1px 10px 2px rgba(0,0,0,0.3);
+		    margin-top: 300px;
+		    display: inline-block;
+	    }
+
+	    .other-players{
+	    	position: fixed;
+	    	top: 10px;
+	    	right: 10px;
+	    	width: 200px;
+	    	background-color: rgb(144, 144, 144);
+	    	border: 2px dashed #ffffff;
+	    	padding: 10px;
+			transition: all .3s;
+			text-align: center;
+	    }
+
+		.other-players.active{
+	    	background-color: #FFC107;
+		}
+
+	    .flex-box{
+	    	display: flex;
+	    	justify-content: space-between;
+	    	flex-wrap: wrap;
+	    	text-align: center;
+	    }
+	    .flex-box .item{
+	    	width: 32%;
+	    	height: 64px;
+	    	margin-bottom: 2%;
+	    	background-color: #ffffff;
+	    	display: flex;
+	    	box-shadow: 1px 1px 10px 0px rgba(0,0,0,0.3);
+	    	display: flex;
+	    	justify-content: center;
+	    	align-items: center;
+	    }
+
+		.transparent{
+			opacity: 0;
+		}
+
+		h1{
+			text-align: center;
+		}
+
+		.success-alert{
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			padding-top: 100px;
+			text-align: center;
+			font-size: 100px;
+			color: #009688;
+			background-color: rgba(255, 255, 255, .3);
+			transform: translateY(-100%);
+			transition: all .3s;
+			z-index: 2;
+		}
+
+		.success-alert.active{
+			transform: translateY(100%);
+		}
+
+
+	</style>
+</head>
+<body>
+	<div id="mask" class="mask">
+		<button class="start-button" id="startbutton" onclick="connectService();">start</button>	
+	</div>
+	<div class="score-board">
+		步数：
+		<span id="scoreBoard"></span>
+	</div>
+	<div id="gameBox" class="box">
+		<div id="boxitem1" class="box-item" onclick="check(1)">1</div>
+		<div id="boxitem2" class="box-item" onclick="check(2)">2</div>
+		<div id="boxitem3" class="box-item" onclick="check(3)">3</div>
+		<div id="boxitem4" class="box-item" onclick="check(4)">4</div>
+		<div id="boxitem5" class="box-item" onclick="check(5)">5</div>
+		<div id="boxitem6" class="box-item" onclick="check(6)">6</div>
+		<div id="boxitem7" class="box-item" onclick="check(7)">7</div>
+		<div id="boxitem8" class="box-item" onclick="check(8)">8</div>
+		<div id="boxitem9" class="box-item" onclick="check(9)">0</div>
+	</div>
+
+	<div id="otherPlayers" class="other-players active">
+		<div class="player-temp">
+			<div class="score">???</div>
+			<div class="flex-box">
+				<div class="item">1</div>
+				<div class="item">2</div>
+				<div class="item">3</div>
+				<div class="item">4</div>
+				<div class="item">5</div>
+				<div class="item">6</div>
+				<div class="item">7</div>
+				<div class="item">8</div>
+				<div class="item">9</div>
+			</div>
+			<div class="info-box">something about playerN</div>
+		</div>
+	</div>
+
+	<div id="alert" class="success-alert">Winner Is !!!</div>
+	
+	<script>
+		// 便于使用document.querySelector 简写一下
+		var _$ = function( selector ){ 
+			return document.querySelector( selector ) 
+		}
+
+		// 写一个消息提示
+		function myAlert(msg) {
+			_$("#alert").innerHTML = msg ;
+			_$("#alert").className = "success-alert active";
+			setTimeout(() => {
+				_$("#alert").className = "success-alert";
+			}, 1000);
+		}
+
+		// 用一个变量指向websocket连接 以方便调用
+		var myWebsocket = null , myName = "nobody" ;
+
+
+
+		// 点击start按钮 连接服务器
+		function connectService(){
+
+			_$("#startbutton").innerHTML = "正在连接服务器..."
+			_$("#startbutton").setAttribute( "disabled" , true );
+			
+			// 存放其他玩家信息
+			var otherPlayers = [];
+			// 创建一个玩家的方法
+			function createPlayer( playerName ){
+				return { name : playerName , score : "???" , gameSteps: [1,2,3,4,5,6,7,8,0]}
+			}
+
+			myWebsocket = new WebSocket("ws://"+ document.domain +":1234");
+
+
+			myWebsocket.addEventListener('open', function (event) {
+				// myWebsocket.send('Hello Server!');
+				// startGame();
+				_$("#startbutton").innerHTML = "等待其他玩家..."
+			});
+
+			// Listen for messages
+			myWebsocket.addEventListener('message', function (event) {
+				console.log('Message from server', event.data );
+				var data = JSON.parse( event.data );
+
+				switch (data.type) {
+					case 1:
+						// get a name
+						if ( data.payload.action === "giveAName" ){
+							myAlert( "welcome~ "+ data.payload.data )
+							myName = data.payload.data ;					
+						}
+						break;
+
+					case 2:
+						// 有人上线了
+						if ( data.payload.action === "someOneIsOnline" ){
+
+							var newPlayer = createPlayer( data.payload.data )
+							otherPlayers.push( newPlayer )
+
+						}else if ( data.payload.action === "players" ){
+
+							data.payload.data.map( function(playerName) {
+								var newPlayer = createPlayer( playerName )
+								otherPlayers.push( newPlayer )
+							})
+							
+
+						}else if ( data.payload.action === "gamestart" ){
+							// 游戏开始
+							var countDownTime = 5 ;
+							var countDown = setInterval(function () {
+								console.log("1")
+								if ( countDownTime === 0 ){
+									startGame();
+									clearInterval(countDown)
+								}else{
+									_$("#startbutton").innerHTML = countDownTime + " 秒后开始游戏！"
+									countDownTime --
+								}
+							},1000)
+							// 清空历史玩家 重新填入参赛玩家
+							otherPlayers = [];
+
+							data.payload.data.map( function(playerName) {
+								if ( playerName != myName ){									
+									var newPlayer = createPlayer( playerName )
+									otherPlayers.push( newPlayer )
+								}
+							})
+
+							renderPlayerBox( otherPlayers )
+
+						}else if ( data.payload.action === "whatHappend" ){
+							// 更新右侧玩家的战况
+							var who = data.payload.data.who ;
+							var what = data.payload.data.what ;
+
+							otherPlayers.forEach( player =>{
+								if ( player.name === who ){
+									player.score = what.score
+									player.gameSteps = what.gameSteps
+								}
+							})
+
+							renderPlayerBox( otherPlayers )
+
+						}else if ( data.payload.action === "someOneWin" ){
+							// 有人获胜啦
+							myAlert( "winner is "+ data.payload.data.winner )
+						}
+
+						break;
+				
+					default:
+						console.log( data )
+						break;
+				}
+			});
+		}
+
+		function renderPlayerBox( players ){
+			var htmlArray = []
+			players.map(function(player) {
+				var gameBoxHtmlArray = player.gameSteps.map( function(step){
+					if (step == 0){
+						return `<div class="item transparent">0</div>`
+					}else{
+						return `<div class="item">${step}</div>`
+					}
+				})
+				htmlArray.push(`
+					<div class="player-temp">
+						<div class="score">${ player.score }</div>
+						<div class="flex-box">
+							${ gameBoxHtmlArray.join("") }
+						</div>
+						<div class="info-box">${ player.name }</div>
+					</div>
+				`)
+			})
+			_$("#otherPlayers").innerHTML = htmlArray.join("");
+		}
+
+
+
+
+
+
+
+		// 用一个变量记录自己的分数
+		var score = 0 ;
+
+		// 开始, 打乱方格顺序.
+
+		// 洗牌算法
+
+		/** javascript
+
+		 * Fisher–Yates shuffle
+
+		 */
+		// Array 数组 [ 1 , 2 , 3 , 4 ]
+		Array.prototype.shuffle = function() {
+		    var input = this;
+
+		    for (var i = input.length-1; i >=0; i--) {
+
+		        var randomIndex = Math.floor(Math.random()*(i+1));
+		        var itemAtIndex = input[randomIndex];
+
+		        input[randomIndex] = input[i];
+		        input[i] = itemAtIndex;
+		    }
+		    return input;
+		}
+
+		function startGame(){
+
+			// array 数组 类型 的变量 boxItem
+			// 声明
+			// 变量var  常量let , swift 中let不可二次修改 
+			var numberList = [1,2,3,4,5,6,7,8] ;
+			// 数据类型之一 字符串 String Object对象 key键 value值
+			// 编程语言 swift html css javascript 
+			// var name = "Sean"
+
+			// bool 布尔值 true false
+			// numberList = false 
+			numberList.shuffle();
+
+			// 打印出来
+			console.log( numberList );
+
+			// 重要：为了保证有解，将最后一位固定为0后，变换前后的数组逆序数对奇偶要保持一致（变换前为偶）
+			// 假设变换后的奇偶性不一致，需要交换0前面两位数的位置以达到一致
+			// 在一个排列中，如果一对数的前后位置与大小顺序相反，即前面的数大于后面的数，那么它们就称为一个逆序。
+			// 一个排列中逆序的总数就称为这个排列的逆序数。逆序数为偶数的排列称为偶排列；逆序数为奇数的排列称为奇排列。如2431中，21，43，41，31是逆序，逆序数是4，为偶排列。
+			//  推导过程 ：https://blog.csdn.net/kaikai4/article/details/51426940
+
+			numberList.push(0);
+
+			// 求逆序数对
+
+			function getInvertedSequence( array ) {
+				var time = 0;
+				for (let i = 0; i < array.length; i++) {
+					const currentElement = array[i];
+
+					for (let n = i; n < array.length; n++) {
+						const elementCompare = array[n];
+						if ( currentElement > elementCompare ){
+							time += 1
+						}
+					}
+				}
+				console.log( time )
+				return time%2
+			}
+
+			if ( getInvertedSequence(numberList) ){
+				console.log("交换位置")
+				let temp = numberList[ numberList.length - 3 ];
+				numberList[ numberList.length - 3 ] = numberList[ numberList.length - 2 ];
+				numberList[ numberList.length - 2 ] = temp;
+			}
+
+			// 将数字填回到格子中
+			var boxList = document.querySelectorAll('.box-item');
+			var boxListLength = boxList.length ;
+
+			for ( var i = 0 ; i < boxListLength ; i++ ) {
+
+				var box = boxList[i];
+				var number = numberList[i];
+				setBoxNumber( box , number );
+
+			}	
+
+			// 将记分板置为0
+			score = 0 ;
+			updateScoreAndReport( score );
+
+			// 关闭遮罩
+			document.getElementById("mask").className = "mask fadeout";
+
+		}
+
+		// 更新分数并且上报当前的战况
+		function updateScoreAndReport( number ){
+			_$("#scoreBoard").innerHTML = number;
+			var boxItems = _$("#gameBox").querySelectorAll(".box-item");
+			var gameSteps = []
+			for (let i = 0; i < boxItems.length; i++) {
+				const element = boxItems[i];
+				gameSteps.push( element.innerHTML )
+			}
+			var gameStatus = {
+				action : "whatHappend",
+				from : myName ,
+				data : {
+					score : number ,
+					gameSteps : gameSteps
+				}
+			}
+			myWebsocket.send( JSON.stringify(gameStatus) )
+		}
+
+		// 给格子设置数字
+		function setBoxNumber( domElement , number ){
+			// 当 此元素的值为0 把它的透明度改为0
+			if ( number == 0 ){
+
+				domElement.style.opacity = 0 ;
+				domElement.title = "我是空的" ;
+
+			}else{
+
+				domElement.style.opacity = 1 ;
+				domElement.title = "点击我换位置" ;
+			}
+
+			domElement.innerHTML = number ;
+		}
+            
+		// 点击数字方块, 数字方块跟相邻的空格交换位置.
+        // 检查 点击的方格能不能换位置
+        function check(number){
+        	// 打印当前的位置
+        	// console.log(number)
+        	var currentDomElement = document.getElementById("boxitem"+number);
+        	// 打印这个位置上的元素
+        	// console.log( currentDomElement )
+
+        	// 判断当前元素内的数字， 如果是 0 不与任何格子交换位置
+        	if ( currentDomElement.innerHTML == "0" ){
+
+        		return
+        	}else{
+
+        		// 判断四个方向能不能换位置
+        		var up = number - 3 ;
+        		if ( checknumAndReplace( up , currentDomElement ) ){
+	        		// 记一次分数
+		    		score = score + 1; 
+	        		updateScoreAndReport(score);
+        			return 
+        		}
+
+        		var down = number + 3 ;
+        		if ( checknumAndReplace( down, currentDomElement ) ){
+	        		// 记一次分数
+		    		score = score + 1; 
+	        		updateScoreAndReport(score);
+        			return
+        		}
+        		
+        		var left = number - 1 ;
+        		if ( checknumAndReplace( left, currentDomElement ) ){
+	        		// 记一次分数
+		    		score = score + 1; 
+	        		updateScoreAndReport(score);
+        			return 
+        		}
+        		       		
+        		var right = number + 1 ;
+
+        		if ( checknumAndReplace( right, currentDomElement ) ){
+	        		// 记一次分数
+		    		score = score + 1; 
+	        		updateScoreAndReport(score);
+        			return
+        		}
+        		
+        	}
+        }
+
+        // 目标位置能不能使用，如果可以使用，交换位置，并且返回true 如果不能 返回false
+        function checknumAndReplace( position , currentDomElement ){
+
+        	if ( position >= 1 && position <= 9 ){
+
+    			var tergetDomElement  = document.getElementById("boxitem"+position);
+
+    			// 临时变量 用来帮助  当前元素 和 目标元素 交换位置
+    			var temp = tergetDomElement.innerHTML
+
+    			// 如果目标元素的值是0 则可以交换位置
+    			if ( temp == "0" ){
+
+    				// alert("可以交换，目标位置:"+ position )
+    				// 将当前元素的值赋给目标元素
+    				setBoxNumber( tergetDomElement , currentDomElement.innerHTML );
+
+    				// 将目标元素的值赋给当前元素
+    				setBoxNumber( currentDomElement , temp );
+
+
+	    			// 每一次交换位置之后 判定一下是否游戏结束
+	    			 if ( checkGameOver() ){
+						//  alert("success!");
+						 // 报告给server
+						 var successMsg = { action : "success" , from : myName };
+						 myWebsocket.send( JSON.stringify(successMsg) );
+	    			 }
+	    			 // 返回换位置成功
+	    			 return true 
+    			}
+        	}
+
+        	// 返回换位置失败
+        	return false
+        }
+
+        function checkGameOver(){
+
+        	var itemList = document.getElementsByClassName("box-item");
+
+        	for (var i = 0 ; i < itemList.length ; i++) {
+        		var item = itemList[ i ];
+        		var value = i + 1 ;
+
+        		// 最后一个是0
+        		if ( value < 9 ){
+	        		if ( item.innerHTML != value ) {
+	        			// 立即判定失败
+	        			return false;
+	        		}
+
+        		}
+
+        	}
+
+        	return true;
+        }
+
+
+
+
+
+        // 点击事件 需要执行一个 function.
+
+        // http://www.w3school.com.cn/css/index.asp
+
+        // 这个function 中判断 当前的方格 （event.target） 能不能与0的方格 换位置.
+
+        // 如果能 则换位置。如果不能则什么都不做.  
+
+		// 判定游戏是否结束, 12345678, 顺序排对了.
+
+        // Sean say: give a "kong xi" color.
+
+        // Sean say: want people name, they can PK "su du".
+
+	</script>
+
+</body>
+</html>
