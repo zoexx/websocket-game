@@ -33,11 +33,16 @@ var url= require('url');
 var path= require('path');
 var fs= require('fs');
 var path=require('path');
+var mine=require('./mine').types;
 
 var httpServer = http.createServer(function(request,response){
     var pathname = url.parse(request.url).pathname;
     var realPath = path.join("./", pathname);
     console.log( request.url , pathname , realPath );
+    
+    var ext = path.extname(realPath);
+    ext = ext ? ext.slice(1) : 'unknown';
+    
     fs.exists( realPath , function(exists){
         if ( !exists ){
             response.writeHead(404, {
@@ -53,8 +58,10 @@ var httpServer = http.createServer(function(request,response){
                     });
                     response.end(err);
                 } else {
+                    var contentType = mine[ext] || "text/plain";
+                    
                     response.writeHead(200, {
-                        'Content-Type': "text/html"
+                        'Content-Type': contentType
                     });
                     response.write(file, "binary");
                     response.end();
